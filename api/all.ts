@@ -1,4 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { JSDOM } from 'jsdom';
+
+const jsdom = new JSDOM();
 
 async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -9,8 +12,8 @@ const ARTICLES_URL = "https://mainichi.jp/maisho/ch190944831i/6%E3%81%95%E3%81%8
 async function getArticleURLs(url: string) {
     const document = await fetch(url)
         .then(res => res.text())
-        .then(text => new DOMParser().parseFromString(text, "text/html"));
-    return Array.from(document.querySelectorAll<HTMLAnchorElement>("ul.panellist.is-4col.js-morelist>li>a")).map(elem => elem.href);
+        .then(text => new jsdom.window.DOMParser().parseFromString(text, "text/html"));
+    return Array.from(document.querySelectorAll<HTMLAnchorElement>("ul.panellist.is-4col.js-morelist>li>a")).map(elem => "https:" + elem.href);
 }
 
 type Article = {
@@ -19,26 +22,22 @@ type Article = {
 }
 
 async function getArticle(url: string): Promise<Article> {
-    await sleep(500);
+    await sleep(250);
     const document = await fetch(url)
         .then(res => res.text())
-        .then(text => new DOMParser().parseFromString(text, "text/html"));
+        .then(text => new jsdom.window.DOMParser().parseFromString(text, "text/html"));
 
     const title = document.querySelector("h1.title-page")?.textContent?.trim() ?? "";
     const body = document.querySelector("#articledetail-body>p")?.innerHTML?.trim()
-        .replace(/<ruby><rb>(.+?)<\/rb>(.+?)<\/ruby>/g, "$1") ?? "";
+        .replace(/<ruby><rb>(.+?)<\/rb>(.+?)<\/ruby>/g, "$1")
+        .replace(/＝写真＝*/g, "") ?? "";
 
     return { title, body };
 }
 
-export default async function handler(
+export default async function all(
     request: VercelRequest,
     response: VercelResponse,
 ) {
-
-    response.status(200).json({
-        body: await Promise.all((await getArticleURLs(ARTICLES_URL)).map(url => getArticle(url))),
-        query: request.query,
-        cookies: request.cookies,
-    });
+    response.status(200).json(await Promise.all((await getArticleURLs(ARTICLES_URL)).map(url => getArticle(url))));
 }
