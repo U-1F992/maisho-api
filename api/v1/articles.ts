@@ -56,7 +56,7 @@ async function getArticle(summary: ArticleSummary, ruby: RubyOption): Promise<Ar
         })
         .reduce((prev, cur) => prev + '\n' + cur);
 
-    return { body, ...summary };
+    return { ...summary, body };
 }
 
 type CountOption = number & { __articleCount: never };
