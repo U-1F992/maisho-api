@@ -33,11 +33,8 @@ async function getArticleSummaries(url: string, count: CountOption): Promise<Art
     }));
 }
 
-type Article = {
-    title: string;
-    publishedAt: Date;
+type Article = ArticleSummary & {
     body: string;
-    thumbnail: string;
 };
 async function getArticle(summary: ArticleSummary, ruby: RubyOption): Promise<Article> {
     const document = await getDocument(summary.url);
@@ -59,12 +56,7 @@ async function getArticle(summary: ArticleSummary, ruby: RubyOption): Promise<Ar
         })
         .reduce((prev, cur) => prev + '\n' + cur);
 
-    return {
-        title: summary.title,
-        publishedAt: summary.publishedAt,
-        body: body,
-        thumbnail: summary.thumbnail
-    };
+    return { body, ...summary };
 }
 
 type CountOption = number & { __articleCount: never };
@@ -105,6 +97,6 @@ export default async function (
     const ARTICLES_URL = "https://mainichi.jp/maisho/ch170361626i/%E6%AF%8E%E5%B0%8F%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9";
     const summaries = await getArticleSummaries(ARTICLES_URL, count);
     const articles = await Promise.all(summaries.map(url => getArticle(url, ruby)))
-    
+
     response.status(200).json(articles);
 }
